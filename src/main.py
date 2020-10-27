@@ -32,12 +32,51 @@ def sitemap():
 
 @app.route('/user', methods=['GET'])
 def handle_hello():
-
     response_body = {
         "msg": "Hello, this is your GET /user response "
     }
-
     return jsonify(response_body), 200
+
+@app.route('/todo/<username>', methods=['GET'])
+def get_todos(username):
+    todos = Todo.query.filter_by(username = username)
+    todos = list(map(lambda x: x.serialize(), todos))
+    return jsonify(todos), 200
+
+@app.route('/todo/<username>', methods=['POST'])
+def post_todo(username):
+    body = request.get_json()
+    exists = Todo.query.filter_by(username = username, label = body['label']).first()
+    if exists is not None:
+        raise APIException('you already have this todo', status_code = 404)
+    todo = Todo(label = body['label'], done = body['done'], username = username)
+    db.session.add(todo)
+    db.session.commit()
+    return json(todo.serialize()), 200
+
+@app.route('/todo/<username>', methods=['PUT'])
+def put_todo(username):
+    body = request.get_json()
+    exists = Todo.query.filter_by(username = username)
+    user_todos = list(map(lambda x: x.serialize(), exists))
+    updated = None
+    for task in user_todos:
+        if task['label'] == body['label']:
+            task['done'] = body['done']
+            updated = task
+    db.session.commit()
+    return jsonify(updated), 200
+
+@app.route('/todos/<username><int:id>', methods=['DELETE'])
+def delete_todo(username, id):
+    todo = Todo.query.get(id)
+    if todo is None:
+        raise APIException('entry does not exist', status_code = 400)
+    db.session.delete(todo)
+    db.sessoin.commit()
+    todos = Todo.query.filter_by(username = username)
+    todos = list(map(lambda x: x.serialize(), todos))
+    return jsonify(todos), 200
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
