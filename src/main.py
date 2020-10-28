@@ -8,7 +8,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User
+from models import db, User, Todo
 #from models import Person
 
 app = Flask(__name__)
@@ -39,42 +39,44 @@ def handle_hello():
 
 @app.route('/todo/<username>', methods=['GET'])
 def get_todos(username):
-    todos = Todo.query.filter_by(username = username)
+    todos = Todo.query.filter_by(user_name = username)
     todos = list(map(lambda x: x.serialize(), todos))
     return jsonify(todos), 200
 
 @app.route('/todo/<username>', methods=['POST'])
 def post_todo(username):
     body = request.get_json()
-    exists = Todo.query.filter_by(username = username, label = body['label']).first()
+    exists = Todo.query.filter_by(user_name = username, label = body['label']).first()
     if exists is not None:
         raise APIException('you already have this todo', status_code = 404)
-    todo = Todo(label = body['label'], done = body['done'], username = username)
+    todo = Todo(label = body['label'], done = body['done'], user_name = username)
     db.session.add(todo)
     db.session.commit()
-    return json(todo.serialize()), 200
+    return jsonify(todo.serialize()), 200
 
-@app.route('/todo/<username>', methods=['PUT'])
-def put_todo(username):
+@app.route('/todo/<int:id>', methods=['PUT'])
+def put_todo(id):
     body = request.get_json()
-    exists = Todo.query.filter_by(username = username)
-    user_todos = list(map(lambda x: x.serialize(), exists))
+    todo_item = Todo.query.get(id)
+    todo_item = todo_item.serialize()
+    print("MYTODOITEM", todo_item)
     updated = None
-    for task in user_todos:
-        if task['label'] == body['label']:
-            task['done'] = body['done']
-            updated = task
+    todo_item['done'] = body['done']
+    todo_item['label'] = body['label']
+    updated = todo_item
     db.session.commit()
-    return jsonify(updated), 200
+    updated_item = Todo.query.get(id)
+    updated_item = updated_item.serialize()
+    return jsonify(updated_item), 200
 
-@app.route('/todos/<username><int:id>', methods=['DELETE'])
+@app.route('/todo/<username>/<int:id>', methods=['DELETE'])
 def delete_todo(username, id):
     todo = Todo.query.get(id)
     if todo is None:
         raise APIException('entry does not exist', status_code = 400)
     db.session.delete(todo)
-    db.sessoin.commit()
-    todos = Todo.query.filter_by(username = username)
+    db.session.commit()
+    todos = Todo.query.filter_by(user_name = username)
     todos = list(map(lambda x: x.serialize(), todos))
     return jsonify(todos), 200
 
