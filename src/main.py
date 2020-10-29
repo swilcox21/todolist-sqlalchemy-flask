@@ -57,13 +57,10 @@ def post_todo(username):
 @app.route('/todo/<int:id>', methods=['PUT'])
 def put_todo(id):
     body = request.get_json()
-    todo_item = Todo.query.get(id)
-    todo_item = todo_item.serialize()
+    todo_item = Todo.query.get(id)    
     print("MYTODOITEM", todo_item)
-    updated = None
-    todo_item['done'] = body['done']
-    todo_item['label'] = body['label']
-    updated = todo_item
+    todo_item.done = body['done']
+    todo_item.label = body['label']
     db.session.commit()
     updated_item = Todo.query.get(id)
     updated_item = updated_item.serialize()
