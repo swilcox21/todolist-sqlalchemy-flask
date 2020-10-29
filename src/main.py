@@ -49,15 +49,15 @@ def post_todo(username):
     exists = Todo.query.filter_by(user_name = username, label = body['label']).first()
     if exists is not None:
         raise APIException('you already have this todo', status_code = 404)
-    todo = Todo(label = body['label'], done = body['done'], user_name = username)
+    todo = Todo(label = body['label'], done = False, user_name = username)
     db.session.add(todo)
     db.session.commit()
-    return jsonify(todo.serialize()), 200
+    return jsonify(todo.serialize()), 201
 
-@app.route('/todo/<int:id>', methods=['PUT'])
-def put_todo(id):
+@app.route('/todo/<username>/<int:id>', methods=['PUT'])
+def put_todo(username, id):
     body = request.get_json()
-    todo_item = Todo.query.get(id)    
+    todo_item = Todo.query.get(id)
     print("MYTODOITEM", todo_item)
     todo_item.done = body['done']
     todo_item.label = body['label']
